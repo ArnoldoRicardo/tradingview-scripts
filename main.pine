@@ -1,0 +1,60 @@
+//@version=5
+indicator("FIBRAs - Setup de Compra/Venta", overlay=true)
+
+// === Configuraciones ===
+ema_length = input.int(21, title="Periodo EMA", group="Tendencia")
+bb_length = input.int(20, title="Periodo Bollinger Bands", group="Bollinger Bands")
+bb_std = input.float(2.0, title="Desviación Estándar BB", group="Bollinger Bands")
+rsi_length = input.int(14, title="Periodo RSI", group="RSI")
+vol_ma_length = input.int(20, title="Promedio de Volumen", group="Volumen")
+sr_lookback = input.int(50, title="Velas para soporte/resistencia", group="Soportes y Resistencias")
+
+// === Cálculo de Indicadores ===
+// Tendencia
+ema21 = ta.ema(close, ema_length)
+
+// Bollinger Bands
+bb_basis = ta.sma(close, bb_length)
+bb_dev = bb_std * ta.stdev(close, bb_length)
+bb_upper = bb_basis + bb_dev
+bb_lower = bb_basis - bb_dev
+
+// Fuerza Relativa
+rsi = ta.rsi(close, rsi_length)
+
+// Volumen
+vol_sma = ta.sma(volume, vol_ma_length)
+
+// Soporte/Resistencia básica (High/Low más cercanos en el lookback)
+highest_high = ta.highest(high, sr_lookback)
+lowest_low = ta.lowest(low, sr_lookback)
+
+// === Lógica de señales ===
+// Compra: debajo EMA, tocando BB baja, RSI bajo, volumen creciente
+buy_signal = close < ema21 and close <= bb_lower and rsi < 35 and volume > vol_sma
+
+// Venta: arriba EMA, tocando BB alta, RSI alto, volumen creciente
+sell_signal = close > ema21 and close >= bb_upper and rsi > 65 and volume > vol_sma
+
+// === Dibujos en el gráfico ===
+// Tendencia
+plot(ema21, color=color.blue, title="EMA 21", linewidth=2)
+
+// Bollinger Bands
+plot(bb_upper, color=color.gray, title="Banda Superior", style=plot.style_line)
+plot(bb_lower, color=color.gray, title="Banda Inferior", style=plot.style_line)
+plot(bb_basis, color=color.gray, title="Media BB", style=plot.style_line)
+
+// Soportes y Resistencias
+plot(highest_high, color=color.red, title="Resistencia Aproximada", style=plot.style_stepline)
+plot(lowest_low, color=color.green, title="Soporte Aproximado", style=plot.style_stepline)
+
+// Señales de compra/venta
+plotshape(buy_signal, title="Compra", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(sell_signal, title="Venta", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// === Panel de Volumen adicional (opcional) ===
+vol_panel = input.bool(false, title="Mostrar Volumen y Promedio", group="Volumen")
+
+plot(vol_panel ? volume : na, color=color.blue, title="Volumen Actual", style=plot.style_histogram)
+plot(vol_panel ? vol_sma : na, color=color.orange, title="Promedio Volumen", style=plot.style_line)
